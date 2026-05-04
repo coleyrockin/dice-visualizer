@@ -2,17 +2,16 @@ import argparse
 from functools import lru_cache
 
 
-
 def load_plotting_dependencies():
     """Import optional plotting dependencies only when rendering the UI."""
     try:
-      import numpy as np
-      import matplotlib.pyplot as plt
-      from matplotlib.widgets import Button, RadioButtons, Slider
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import Button, RadioButtons, Slider
     except ModuleNotFoundError as exc:
-      raise RuntimeError(
-          "Plotting requires numpy and matplotlib. Install with: python -m pip install -e ."
-      ) from exc
+        raise RuntimeError(
+            "Plotting requires numpy and matplotlib. Install with: python -m pip install -e ."
+        ) from exc
 
     return np, plt, Slider, Button, RadioButtons
 
@@ -44,6 +43,12 @@ def count_matching_outcomes(n_dice, target_sum):
     )
 
 
+def probability_for_sum(n_dice, target_sum):
+    """Return the probability that n six-sided dice sum to target_sum."""
+    n_dice, target_sum = validate_dice_target(n_dice, target_sum)
+    return count_matching_outcomes(n_dice, target_sum) / (6**n_dice)
+
+
 def plot_ndice(n_dice, target_sum):
     """
     Plot the dice-sum probability space for n_dice, highlighting combinations
@@ -56,7 +61,10 @@ def plot_ndice(n_dice, target_sum):
     n_dice, target_sum = validate_dice_target(n_dice, target_sum)
     np, plt, Slider, Button, RadioButtons = load_plotting_dependencies()
 
-    # ---- 1D case ----
+    matching_outcomes = count_matching_outcomes(n_dice, target_sum)
+    probability = probability_for_sum(n_dice, target_sum)
+    title_suffix = f"matches: {matching_outcomes}, p={probability:.2%}"
+
     if n_dice == 1:
         fig, ax = plt.subplots()
         x = np.arange(1, 7)
@@ -75,11 +83,10 @@ def plot_ndice(n_dice, target_sum):
         ax.set_yticks([])
         ax.set_xlim(0.5, 6.5)
         ax.set_xlabel("Die 1")
-        ax.set_title(f"1 die — target sum {target_sum}")
+        ax.set_title(f"1 die — target sum {target_sum} ({title_suffix})")
         plt.show()
         return
 
-    # ---- 2D case ----
     if n_dice == 2:
         fig, ax = plt.subplots()
         X, Y = np.meshgrid(np.arange(1, 7), np.arange(1, 7), indexing="ij")
@@ -90,14 +97,11 @@ def plot_ndice(n_dice, target_sum):
         ax.set_ylabel("Die 2")
         ax.set_xticks(np.arange(1, 7))
         ax.set_yticks(np.arange(1, 7))
-        ax.set_title(
-            f"2 dice — target sum {target_sum} (matches: {np.sum(sums == target_sum)})"
-        )
+        ax.set_title(f"2 dice — target sum {target_sum} ({title_suffix})")
         ax.set_aspect("equal", adjustable="box")
         plt.show()
         return
 
-    # ---- 3D case ----
     if n_dice == 3:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
@@ -115,18 +119,16 @@ def plot_ndice(n_dice, target_sum):
         ax.set_xlabel("Die 1")
         ax.set_ylabel("Die 2")
         ax.set_zlabel("Die 3")
-        ax.set_title(f"3 dice — target sum {target_sum} (matches: {np.sum(mask)})")
+        ax.set_title(f"3 dice — target sum {target_sum} ({title_suffix})")
         plt.show()
         return
 
-    # ---- n_dice > 3: interactive slice ----
     extra_dims = n_dice - 3
-    total_slices = 6 ** extra_dims  # number of possible slices for remaining dice
+    total_slices = 6**extra_dims
 
     fig = plt.figure(figsize=(11, 6))
     ax_main = fig.add_subplot(121, projection="3d")
 
-    # Radio buttons to pick which dice are X,Y,Z
     labels = [str(i + 1) for i in range(n_dice)]
     ax_rx = fig.add_axes([0.72, 0.78, 0.23, 0.10])
     rx = RadioButtons(ax_rx, labels, active=0)
@@ -140,18 +142,9 @@ def plot_ndice(n_dice, target_sum):
     rz = RadioButtons(ax_rz, labels, active=2)
     ax_rz.set_title("Z axis die", fontsize=10)
 
-    # Slider for choosing the slice of the remaining dice
     ax_slider = fig.add_axes([0.20, 0.08, 0.45, 0.03])
-    slice_slider = Slider(
-        ax_slider,
-        "Slice",
-        0,
-        total_slices - 1,
-        valinit=0,
-        valstep=1,
-    )
+    slice_slider = Slider(ax_slider, "Slice", 0, total_slices - 1, valinit=0, valstep=1)
 
-    # Prev / Next buttons
     ax_prev = fig.add_axes([0.20, 0.02, 0.08, 0.04])
     ax_next = fig.add_axes([0.30, 0.02, 0.08, 0.04])
     btn_prev = Button(ax_prev, "Prev")
@@ -195,7 +188,7 @@ def plot_ndice(n_dice, target_sum):
         ax_main.set_zlabel(f"Die {z_idx + 1}")
         ax_main.set_title(
             f"{n_dice} dice — target sum {target_sum} "
-            f"(matches: {int(np.sum(mask))})"
+            f"(slice matches: {int(np.sum(mask))}, total p={probability:.2%})"
         )
 
         if remaining:
@@ -222,12 +215,12 @@ def plot_ndice(n_dice, target_sum):
         render(val)
 
     def on_prev(event):
-        new_val = max(slice_slider.val - 1, 0)
-        slice_slider.set_val(new_val)
+        del event
+        slice_slider.set_val(max(slice_slider.val - 1, 0))
 
     def on_next(event):
-        new_val = min(slice_slider.val + 1, total_slices - 1)
-        slice_slider.set_val(new_val)
+        del event
+        slice_slider.set_val(min(slice_slider.val + 1, total_slices - 1))
 
     rx.on_clicked(on_radio_x)
     ry.on_clicked(on_radio_y)
@@ -238,8 +231,6 @@ def plot_ndice(n_dice, target_sum):
 
     render(0)
     plt.show()
-
-
 
 
 def main(argv=None):
