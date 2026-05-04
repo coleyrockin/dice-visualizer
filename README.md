@@ -25,8 +25,16 @@ python -m pip install -e '.[dev]'
 
 ## Run
 
+Open the interactive visualizer:
+
 ```bash
 dice-visualizer --dice 4 --target 14
+```
+
+Print a quick probability summary without opening a GUI:
+
+```bash
+dice-visualizer --dice 4 --target 14 --summary
 ```
 
 Or:
@@ -40,6 +48,8 @@ python Dice.py
 ```bash
 python -m pytest
 ```
+
+GitHub Actions runs tests on Python 3.10, 3.11, and 3.12, then smoke-tests the summary CLI.
 
 ## Notes
 

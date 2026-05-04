@@ -49,6 +49,18 @@ def probability_for_sum(n_dice, target_sum):
     return count_matching_outcomes(n_dice, target_sum) / (6**n_dice)
 
 
+def format_probability_summary(n_dice, target_sum):
+    """Return a human-readable probability summary for a dice target."""
+    n_dice, target_sum = validate_dice_target(n_dice, target_sum)
+    matches = count_matching_outcomes(n_dice, target_sum)
+    total = 6**n_dice
+    probability = matches / total
+    return (
+        f"{n_dice} dice targeting {target_sum}: "
+        f"{matches} matching outcomes out of {total} ({probability:.2%})"
+    )
+
+
 def plot_ndice(n_dice, target_sum):
     """
     Plot the dice-sum probability space for n_dice, highlighting combinations
@@ -237,7 +249,17 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Visualize dice-sum probability spaces.")
     parser.add_argument("--dice", type=int, default=4, help="Number of six-sided dice")
     parser.add_argument("--target", type=int, default=14, help="Target sum to highlight")
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print the probability summary without opening the plot UI",
+    )
     args = parser.parse_args(argv)
+
+    if args.summary:
+        print(format_probability_summary(args.dice, args.target))
+        return
+
     plot_ndice(args.dice, args.target)
 
 

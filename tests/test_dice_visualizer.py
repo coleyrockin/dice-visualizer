@@ -2,6 +2,7 @@ import pytest
 
 from dice_visualizer import (
     count_matching_outcomes,
+    format_probability_summary,
     probability_for_sum,
     validate_dice_target,
 )
@@ -28,3 +29,9 @@ def test_counts_ordered_matching_outcomes():
 def test_probability_for_sum():
     assert probability_for_sum(2, 7) == pytest.approx(6 / 36)
     assert probability_for_sum(4, 14) == pytest.approx(146 / 1296)
+
+
+def test_formats_probability_summary():
+    assert format_probability_summary(2, 7) == (
+        "2 dice targeting 7: 6 matching outcomes out of 36 (16.67%)"
+    )
